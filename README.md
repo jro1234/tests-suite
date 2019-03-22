@@ -11,7 +11,7 @@ to full end-to-end workflow tests.
 
 AdaptiveMD - Workflow Generator
  - with RP:
- - bare-metal:
+ - bare metal:
 
 Radical Pilot - Rsc/Exec Manager
  - OpenMM MD:
@@ -20,11 +20,18 @@ Radical Pilot - Rsc/Exec Manager
  - helloworld:
 
 OpenMM - MD Task Kernel
- - benchmark: `python -m simtk.testInstallation`
+ - benchmark: find & use `/openmm/examples/benchmark.py`
+ - test: execute `python -m simtk.testInstallation`
    - without submission:
    - with submission:
- - MD: villin system
+ - MD: villin system `TODO simple call`
  
 Cuda_add - hello gpu
  - without submission:
  - with submission:
+
+Experiments: Weak Scaling with Villin MD System
+ - AdaptiveMD bare metal:
+   - watch: DB Host, workflow execution profiling
+ - AdaptiveMD with RP:
+   - watch: workflow execution profiling

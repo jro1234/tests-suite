@@ -118,13 +118,11 @@ echo "export TESTS_HOME=\"$INSTALL_HOME\"" >> $SHPROFILE
 
 cd "$CWD"
 cp -r tests $INSTALL_HOME
-
-if [ "${COPY_TEST_SUITE,,}" = "true" ]; then
-  cp -r ../hellogpu $INSTALL_HOME
-  cd $INSTALL_HOME/hellogpu
-  ./install.sh
-  cd "$CWD"
-fi
+cp ../ttools.py $INSTALL_HOME/tests
+cp -r ../hellogpu $INSTALL_HOME
+cd $INSTALL_HOME/hellogpu
+./install.sh
+cd "$CWD"
 
 echo ""
 echo "-------------------------------------------------"

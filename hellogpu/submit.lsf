@@ -1,0 +1,13 @@
+#!/bin/bash
+# Begin LSF Directives
+#BSUB -P bif112
+#BSUB -W 0:03
+#BSUB -nnodes 1
+#BSUB -alloc_flags gpumps
+#BSUB -J cuda_add
+#BSUB -o cuda_add.%J
+#BSUB -e cuda_add.%J
+ 
+cd $MEMBERWORK/bif112/test-summit/
+date
+jsrun -n1 -g1 -a1 -c1 ./cuda_add

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# ### TODO args
+# ##INP=$1
+#INP="-Is /bin/bash"
+
+PROJECT="bif112"
+MINUTES="5"
+NNODES="1"
+JOBSCRIPT="jobscript.lsf"
+
+EXTRAS="-alloc_flags \"gpumps smt4\""
+
+
+bsub "$EXTRAS" -P "$PROJECT" -W "0:$MINUTES" -nnodes "$NNODES" "$INP" "$JOBSCRIPT"

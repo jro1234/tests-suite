@@ -4,7 +4,6 @@
 #     OpenMM in the root conda from fresh
 #     download of PPC64le Miniconda version
 #
-# PACKAGES: radical.utils, saga-python, radical.pilot
 
 echo "-------------------------------------------------"
 echo "-------- Installing OpenMM Test Platform --------"
@@ -17,8 +16,8 @@ INSTALL_NAME="tests-openmm"
 INSTALL_HOME="$PROJWORK/bif112/tests-summit/$INSTALL_NAME"
 #INSTALL_HOME="/gpfs/alpine/proj-shared/bif112/"
 #INSTALL_HOME="/ccs/proj/bif112/"
-SHPROFILE="$INSTALL_HOME/.testrc"
-CONDA_VERSION="Miniconda2-latest-Linux-ppc64le.sh"
+SHPROFILE="$INSTALL_HOME/testrc.bash"
+CONDA_VERSION="Miniconda3-latest-Linux-ppc64le.sh"
 
 # SETUP:
 PKG_HOME="$INSTALL_HOME/packages"

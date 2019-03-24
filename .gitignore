@@ -1,2 +1,7 @@
 # Extra stuff
 extras/*
+
+*swp
+*swo
+**/*swp
+**/*swo

@@ -1,6 +1,80 @@
+import sys
+sys.dont_write_bytecode = True
+
 import os
 import subprocess
 import shlex
+import yaml
+
+from string import Formatter
+
+
+get_format_fields = lambda s: [
+    fname for _, fname, _, _
+    in Formatter().parse(s) if fname
+]
+
+
+def flatten_list(l):
+    '''Flatten nested lists
+    '''
+    return flatten_list(l[0]) + (
+           flatten_list(l[1:]) if len(l) > 1 else []
+           ) if type(l) is list else [l]
+
+
+def flatten_dict(d):
+    def _flatten_dict(d):
+        '''Sort-of Flatten nested dict
+        They come out as nested lists
+        '''
+      #  if isinstance(d, list):
+      #      for sub_d in d:
+      #          yield list(_flatten_dict(sub_d))
+        if isinstance(d, dict):
+            for value in d.values():
+                yield list(_flatten_dict(value))
+        else:
+            yield d
+
+    return list(_flatten_dict(d))
+
+
+def keyrefs_from_dict(d):
+    '''Dict with keys and reference to fill value
+    '''
+    keyrefs = dict()
+    def _unroll(d):
+        if isinstance(d, dict):
+            for value in d.values():
+                yield list(_unroll(value))
+        elif isinstance(d, list):
+            for value in d:
+                yield list(_unroll(value))
+        elif isinstance(d, str):
+            for k in get_format_fields(d):
+                if k not in keyrefs:
+                    keyrefs[k] = None
+        else:
+            yield d
+
+    return keyrefs
+
+    
+def small_proc_watch_block(command):
+    '''Should only use with fast executing commands
+    and manageable output size. All errors are lost.
+    '''
+    proc = subprocess.Popen(
+        shlex.split(command),
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+    )
+
+    out = proc.stdout.read()
+    retval = proc.wait()
+
+    return out, retval
+
 
 # TODO replace path insert formatting with os.path.join
 class MongoInstance(object):
@@ -19,14 +93,8 @@ class MongoInstance(object):
         self.dbport = dbport
 
     def discover_mongod_command(self):
-        proc = subprocess.Popen(
-            shlex.split("command -v mongod"),
-            stdout=subprocess.PIPE, stderr=subprocess.IGNORE
-        )
-
-        out = proc.stdout.read()
-        retval = proc.wait()
-
+        dicover_command = "command -v mongod"
+        out, retval = small_proc_watch_block(discover_command)
         if out: return True
         else:   return False
 
@@ -211,3 +279,180 @@ class SessionMover(object):
             raise StopIteration
 
         return self.current
+
+
+
+cli_args_from_dict = lambda d: ' '.join(
+    [' '.join([str(k),str(v)])
+    for k,v in d.items() if v is not None])
+
+
+# TODO rename, the class builds job config
+#      and is used to launch the job
+# TODO ^^ instead, keep a JobBuilder and use
+#      it to load and return a JobLauncher
+#      class. Each contains a JobConfiguration
+#      attribute that is built by builder.
+class JobBuilder(object):
+    '''Create an LRMS job to acquire resources for a workload
+    Read configuration from a yaml file. Two top-level fields
+    are required: "job" and "task". Options for each are built
+    into the actual LRMS job.
+     TODO - subfields, yaml organization<->python datatypes
+    '''
+    _required_ = {
+        "job":  {"launcher"}, 
+        "task": {"launcher","resource","main"},
+    }
+
+    def __init__(self):
+
+        super(JobBuilder, self).__init__()
+
+        self._job_launcher = None
+        self._job_configuration = None
+        self._script = None
+        self._keys = dict()
+
+    @property
+    def configured(self):
+        return all([
+            v is not None for v
+            in flatten_list(flatten_dict(self._keys))
+        ])
+
+    @property
+    def job_configuration(self):
+        return self._job_configuration
+
+    @property
+    def job_launcher(self):
+        '''Job submission CLI command
+        that is actually used to submit a job
+        to the LRMS.
+        '''
+        if self._job_launcher is None:
+            if self.job_configuration is not None:
+                self._configure_launcher()
+
+        return self._job_launcher
+
+    def _configure_launcher(self):
+
+        if self._job_launcher:
+            return
+
+        if self.job_configuration:
+            # TODO differentiate required vs optional
+            #      config keys with 'get' vs hard hash
+            jobopts = self.job_configuration["job"]
+            launcher = jobopts["launcher"]
+            launch_args = ' '.join(jobopts["arguments"])
+            launch_opts = cli_args_from_dict(jobopts["options"])
+            job_launcher = ' '.join(
+                [launcher, launch_args, launch_opts])
+
+            job_script = "jobscript.bash"
+            self._job_launcher = ' '.join([job_launcher, job_script])
+
+            taskopts = self.job_configuration["task"]
+            launcher = taskopts["launcher"]
+            launch_args = cli_args_from_dict(taskopts["resource"])
+            task_launcher = ' '.join([launcher, launch_args])
+            main_exec = taskopts["main"]["executable"]
+            main_args = ' '.join(taskopts["main"]["arguments"])
+            main_opts = cli_args_from_dict(taskopts["main"]["options"])
+            main_line = ' '.join(
+                [task_launcher, main_exec, main_args, main_opts])
+
+            script_template = '\n'.join(
+                self.job_configuration["job"]["script"])
+
+            self._script = '\n\n'.join(
+                [script_template, main_line])
+
+    def load(self, yaml_config):
+
+        with open(yaml_config, 'r') as fyml:
+            config = yaml.load(fyml)
+
+        for r in JobBuilder._required_:
+            assert r in config
+            assert all([
+                _r in config[r] for _r
+                in JobBuilder._required_[r]
+            ])
+
+        self._job_configuration = config
+        self._read_config_keys()
+
+    def configure_workload(self, config_dict):
+        '''Give a configuration to bind missing parameters.
+        If all parameter keys are given values, the `configured`
+        attribute will return True and jobs can be launched.
+        '''
+        assert isinstance(config_dict, dict)
+
+        for k in self._keys:
+            self._keys[k] = config_dict[k]
+
+    def _read_config_keys(self):
+        '''Keys allow user to hook parameters later
+        such as the walltime, number of nodes, etc.
+        '''
+        flatconfig = flatten_list(flatten_dict(
+            self.job_configuration))
+
+        self._keys = {
+            k[0]:None for k in
+            [get_format_fields(fc) for fc
+             in flatconfig if isinstance(fc, str)
+            ] if k
+        }
+
+    def _write_script(self):
+        '''Write a script to submit a job
+        '''
+        script = self._fill_fields(self._script)
+
+        with open('jobscript.bash', 'w') as fjob:
+            fjob.write("#!/bin/bash\n")
+            fjob.write(script)
+
+    def _fill_fields(self, template):
+        needed_keys = get_format_fields(template)
+        kwargs = dict()
+        [kwargs.update({k:self._keys[k]}) for k in needed_keys]
+        filled = template.format(**kwargs)
+
+        return filled
+
+    def launch_job(self):
+        '''Launch a job using the built command
+        if the configuration is complete, ie keys
+        all have values.
+        '''
+        _live_ = True
+
+        if self.configured:
+            if not self.job_launcher:
+                self._configure_launcher()
+
+            job_launcher = self._fill_fields(self.job_launcher)
+
+            print("Job Launcher")
+            print(" -- " + job_launcher)
+            if _live_:
+                self._write_script()
+
+                out, retval = small_proc_watch_block(
+                   job_launcher)
+
+                print(out)
+                print("")
+                print("Any errors during submission? (0 means no, i.e. good thing)")
+                print(retval)
+                print("")
+
+            else:
+                print("Not launching now")

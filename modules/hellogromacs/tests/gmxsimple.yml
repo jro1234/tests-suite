@@ -1,0 +1,42 @@
+job:
+  launcher: "bsub"
+
+  options:
+    -J:       "GMX-simpletest"
+    -P:       "{allocation}"
+    -W:       "{minutes}"
+    -nnodes: "{n_nodes}"
+
+  arguments:
+    - "-alloc_flags \"gpumps smt4\""
+
+  script:
+    - "module load gcc cuda"
+    - "export OMP_NUM_THREADS={threads_per_task}"
+    - "source /ccs/proj/bif112/gromacs2018.3-summit/bin/GMXRC.bash"
+    - "which gmx_mpi"
+
+task:
+  launcher: "jsrun"
+
+  resource:
+    --exit_on_error:       1
+    --nrs:                 "{n_tasks}"
+    --tasks_per_rs:        "{mpi_per_task}"
+    --cpu_per_rs:          "{threads_per_task}"
+    --gpu_per_rs:          "{gpu_per_task}"
+    --bind:                "packed:{threads_per_task}"
+    --launch_distribution: "plane:1"
+    --latency_priority:    
+
+  main:
+    executable: "gmx_mpi"
+    arguments:
+      - "mdrun"
+    options:
+      -s:       "small.tpr"
+      -o:       "md.trr"
+      -e:       "md.edr"
+      -g:       "md.log"
+      -c:       "mdout.gro"
+      -nsteps:  20000

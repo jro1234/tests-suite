@@ -4,12 +4,14 @@
 # ##INP=$1
 #INP="-Is /bin/bash"
 
-PROJECT="bif112"
-MINUTES="5"
-NNODES="1"
-JOBSCRIPT="jobscript.lsf"
+PROJECT="$1"
+MINUTES="$2"
+NNODES="$3"
+INP="$4"
+#EXTRAS="-alloc_flags \"gpumps smt4\""
+EXTRAS="${@:5}"
 
-EXTRAS="-alloc_flags \"gpumps smt4\""
+JOBSCRIPT="jobscript.lsf"
 
 
 bsub "$EXTRAS" -P "$PROJECT" -W "0:$MINUTES" -nnodes "$NNODES" "$INP" "$JOBSCRIPT"

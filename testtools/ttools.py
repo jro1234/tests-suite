@@ -40,27 +40,6 @@ def flatten_dict(d):
     return list(_flatten_dict(d))
 
 
-def keyrefs_from_dict(d):
-    '''Dict with keys and reference to fill value
-    '''
-    keyrefs = dict()
-    def _unroll(d):
-        if isinstance(d, dict):
-            for value in d.values():
-                yield list(_unroll(value))
-        elif isinstance(d, list):
-            for value in d:
-                yield list(_unroll(value))
-        elif isinstance(d, str):
-            for k in get_format_fields(d):
-                if k not in keyrefs:
-                    keyrefs[k] = None
-        else:
-            yield d
-
-    return keyrefs
-
-    
 def small_proc_watch_block(command):
     '''Should only use with fast executing commands
     and manageable output size. All errors are lost.

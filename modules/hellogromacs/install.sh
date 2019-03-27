@@ -13,7 +13,7 @@ echo ""
 # CONFIGURATION:
 CWD="$(pwd)"
 INSTALL_NAME="tests-gromacs"
-INSTALL_HOME="/gpfs/alpine/proj-shared/bif112/$INSTALL_NAME"
+INSTALL_HOME="/gpfs/alpine/proj-shared/bif112/tests-summit/$INSTALL_NAME"
 #INSTALL_HOME="/ccs/proj/bif112/tests-summit/$INSTALL_NAME"
 SHPROFILE="$INSTALL_HOME/testrc.bash"
 
@@ -27,8 +27,10 @@ echo "export TESTS_HOME=\"$INSTALL_HOME\"" >> $SHPROFILE
 cd "$CWD"
 cp -r tests                  $INSTALL_HOME
 cp -r ../../joblauncher      $INSTALL_HOME
-cp ../../testtools/*         $INSTALL_HOME/tests
 cp ../../mdsystems/gromacs/* $INSTALL_HOME/tests
+for fn in $INSTALL_HOME/tests/test-*; do
+  cp ../../testtools/*       $fn
+done
 
 echo "export PATH=\"$INSTALL_HOME/joblauncher:\$PATH\"" >> $SHPROFILE
 

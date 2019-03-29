@@ -26,7 +26,7 @@ task:
     --cpu_per_rs:          "{threads_per_task}"
     --gpu_per_rs:          "{gpu_per_task}"
     --bind:                "packed:{threads_per_task}"
-    --launch_distribution: "plane:1"
+    --launch_distribution: "plane:{mpi_per_task}"
     --latency_priority:    
 
   main:
@@ -39,4 +39,4 @@ task:
       -e:       "md.edr"
       -g:       "md.log"
       -c:       "mdout.gro"
-      -nsteps:  20000
+      -nsteps:  50000

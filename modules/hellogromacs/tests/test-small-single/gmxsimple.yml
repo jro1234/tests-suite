@@ -2,9 +2,9 @@ job:
   launcher: "bsub"
 
   options:
-    -J:      "GMX-test"
-    -P:      "{allocation}"
-    -W:      "{minutes}"
+    -J:       "GMX-simpletest"
+    -P:       "{allocation}"
+    -W:       "{minutes}"
     -nnodes: "{n_nodes}"
 
   arguments:
